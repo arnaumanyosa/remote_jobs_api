@@ -12,7 +12,7 @@ describe("Jobs", () => {
     // Test to get all jobs record
     it("should get all jobs record", (done) => {
       chai
-        .request(app)
+        .request(`http://localhost:${process.env.PORT || 3002}`)
         .get("/jobs")
         .end((err, res) => {
           res.should.have.status(200);
@@ -23,7 +23,9 @@ describe("Jobs", () => {
 
     // Test get limiter
     it("Sixth GET call in less than a minute should get a http response status of 429 (Too many requests)", (done) => {
-      const requester = chai.request(app).keepOpen();
+      const requester = chai
+        .request(`http://localhost:${process.env.PORT || 3002}`)
+        .keepOpen();
 
       let startTest = Date.now();
 
