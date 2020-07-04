@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
+const rateLimit = require("express-rate-limit");
 const { pool } = require("./config");
 
 const app = express();
@@ -69,14 +70,24 @@ const addJob = (request, response) => {
   );
 };
 
-app
-  .route("/jobs")
-  // GET endpoint
-  .get(getJobs)
-  // POST endpoint
-  .post(addJob);
+const mainLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 5, // 5 requests,
+});
+
+app.use(mainLimiter);
+
+const postLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 1,
+});
+
+app.route("/jobs").get(getJobs).post(postLimiter, addJob);
 
 // Start server
 app.listen(process.env.PORT || 3002, () => {
   console.log(`Server listening...`);
 });
+
+// Export our app for testing purposes
+module.exports = { app };
