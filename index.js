@@ -77,9 +77,9 @@ const addJob = (request, response) => {
 };
 
 /**
- * Add multiple jobs with a single SQL INSERT
- * @param {*} request
- * @param {*} response
+ * Add multiple jobs to our DB with a single INSERT
+ * @param {Object} request
+ * @param {Object} response
  */
 
 const addJobs = (request, response) => {
