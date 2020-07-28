@@ -27,6 +27,11 @@ const getJobs = (request, response) => {
   });
 };
 
+/**
+ * Add a single job to our DB
+ * @param {Object} request
+ * @param {Object} response
+ */
 const addJob = (request, response) => {
   const {
     source,
