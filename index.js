@@ -85,7 +85,7 @@ const addJob = (request, response) => {
 const addJobs = (request, response) => {
   // We need to transponse the array of objects into a bidimensional array
   // In order to do a multiple row insert
-  const dataTraversed = request.body.reduce(
+  const dataTransposed = request.body.reduce(
     (acc, job) => {
       Object.keys(job).forEach((key, index) => acc[index].push(job[key]));
       return [...acc];
@@ -101,7 +101,7 @@ const addJobs = (request, response) => {
     $6::varchar[], $7::text[], $8::text[], $9::varchar[], $10::text[],$11::text[], $12::varchar[],$13::text[])`;
 
   // Run insert query
-  pool.query(insertQuery, dataTraversed, (error) => {
+  pool.query(insertQuery, dataTransposed, (error) => {
     if (error) {
       throw error;
     }
