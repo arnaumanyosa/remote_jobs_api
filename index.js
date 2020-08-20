@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
+const rateLimit = require("express-rate-limit");
 const { pool } = require("./config");
 
 const app = express();
@@ -10,8 +11,8 @@ const app = express();
 app.use(compression());
 app.use(helmet());
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({ limit: "1mb" }));
+app.use(bodyParser.urlencoded({ extended: true, limit: "1mb" }));
 
 app.use(cors());
 
@@ -26,6 +27,11 @@ const getJobs = (request, response) => {
   });
 };
 
+/**
+ * Add a single job to our DB
+ * @param {Object} request
+ * @param {Object} response
+ */
 const addJob = (request, response) => {
   const {
     source,
@@ -64,19 +70,79 @@ const addJob = (request, response) => {
       if (error) {
         throw error;
       }
+      console.info(
+        `=> ONE job added on ${new Date()
+          .toJSON()
+          .slice(0, 10)} at ${new Date().toJSON().slice(11, 19)}`
+      );
+
       response.status(201).json({ status: "success", message: "Job added." });
     }
   );
 };
 
-app
-  .route("/jobs")
-  // GET endpoint
-  .get(getJobs)
-  // POST endpoint
-  .post(addJob);
+/**
+ * Add multiple jobs to our DB with a single INSERT
+ * @param {Object} request
+ * @param {Object} response
+ */
+
+const addJobs = (request, response) => {
+  // We need to transponse the array of objects into a bidimensional array
+  // In order to do a multiple row insert
+  const dataTransposed = request.body.reduce(
+    (acc, job) => {
+      Object.keys(job).forEach((key, index) => acc[index].push(job[key]));
+      return [...acc];
+    },
+    Object.keys(request.body[0]).map((item) => new Array())
+  );
+
+  // Define insert query using unnest
+  const insertQuery = `INSERT INTO
+  jobs (source, sourceID, type, sourceUrl, creationDate, company, companyUrl,
+  companyLogoUrl, title, description, tags, category, applyUrl)
+  SELECT * FROM UNNEST ($1::varchar[], $2::varchar[], $3::varchar[], $4::text[], $5::varchar[],
+    $6::varchar[], $7::text[], $8::text[], $9::varchar[], $10::text[],$11::text[], $12::varchar[],$13::text[])`;
+
+  // Run insert query
+  pool.query(insertQuery, dataTransposed, (error) => {
+    if (error) {
+      throw error;
+    }
+
+    console.info(
+      `=> ${request.body.length} jobs added on ${new Date()
+        .toJSON()
+        .slice(0, 10)} at ${new Date().toJSON().slice(11, 19)}`
+    );
+
+    response.status(201).json({
+      status: "success",
+      message: `${request.body.length} jobs added`,
+    });
+  });
+};
+
+const mainLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 5, // 5 requests,
+});
+
+app.use(mainLimiter);
+
+const postLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 1,
+});
+
+app.route("/jobs").get(getJobs).post(addJobs).post(addJob);
+app.route("/job").post(postLimiter, addJob);
 
 // Start server
 app.listen(process.env.PORT || 3002, () => {
-  console.log(`Server listening...`);
+  console.log(`Server listening...\n`);
 });
+
+// Export our app for testing purposes
+module.exports = { app };
