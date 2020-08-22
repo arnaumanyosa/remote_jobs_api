@@ -50,7 +50,7 @@ const addJob = (request, response) => {
   } = request.body;
 
   pool.query(
-    "INSERT INTO jobs (source, sourceID, type, sourceUrl, creationDate, company, companyUrl, companyLogoUrl, title, description, tags, category, applyUrl) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+    "INSERT INTO jobs (source, sourceID, type, sourceUrl, creationDate, company, companyUrl, companyLogoUrl, title, description, tags, category, applyUrl) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) ON CONFLICT (sourceID) DO NOTHING",
     [
       source,
       sourceID,
@@ -66,12 +66,14 @@ const addJob = (request, response) => {
       category,
       applyUrl,
     ],
-    (error) => {
-      if (error) {
-        throw error;
+    (queryError, queryResponse) => {
+      if (queryError) {
+        throw queryError;
       }
       console.info(
-        `=> ONE job added on ${new Date()
+        `=> ${
+          queryResponse.rowCount
+        } jobs added out of 1 possible on ${new Date()
           .toJSON()
           .slice(0, 10)} at ${new Date().toJSON().slice(11, 19)}`
       );
@@ -103,16 +105,19 @@ const addJobs = (request, response) => {
   jobs (source, sourceID, type, sourceUrl, creationDate, company, companyUrl,
   companyLogoUrl, title, description, tags, category, applyUrl)
   SELECT * FROM UNNEST ($1::varchar[], $2::varchar[], $3::varchar[], $4::text[], $5::varchar[],
-    $6::varchar[], $7::text[], $8::text[], $9::varchar[], $10::text[],$11::text[], $12::varchar[],$13::text[])`;
+    $6::varchar[], $7::text[], $8::text[], $9::varchar[], $10::text[],$11::text[], $12::varchar[],$13::text[])
+    ON CONFLICT (sourceID) DO NOTHING`;
 
   // Run insert query
-  pool.query(insertQuery, dataTransposed, (error) => {
-    if (error) {
-      throw error;
+  pool.query(insertQuery, dataTransposed, (queryError, queryResponse) => {
+    if (queryError) {
+      throw queryError;
     }
 
     console.info(
-      `=> ${request.body.length} jobs added on ${new Date()
+      `=> ${queryResponse.rowCount} jobs added out of ${
+        request.body.length
+      } possible on ${new Date()
         .toJSON()
         .slice(0, 10)} at ${new Date().toJSON().slice(11, 19)}`
     );
