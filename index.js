@@ -136,7 +136,7 @@ const postLimiter = rateLimit({
   max: 1,
 });
 
-app.route("/jobs").get(getJobs).post(addJobs).post(addJob);
+app.route("/jobs").get(getJobs).post(addJobs);
 app.route("/job").post(postLimiter, addJob);
 
 // Start server
