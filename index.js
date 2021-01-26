@@ -17,7 +17,20 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cors());
 
 const getJobs = (request, response) => {
-  pool.query("SELECT * FROM jobs", (error, results) => {
+
+  let query = `SELECT * FROM jobs`;
+
+  if(request.query.search) {
+    const searchTerms = request.query.search.toLowerCase().trim().replace(/ /g, '|');
+
+    query = `SELECT * FROM jobs WHERE
+      LOWER(title) ~ '${searchTerms}'
+      OR LOWER(description) ~ '${searchTerms}'
+      OR LOWER(tags) ~ '${searchTerms}'
+    `;
+  }
+
+  pool.query(query, (error, results) => {
     if (error) {
       console.log("get jobs error => ", error);
 
